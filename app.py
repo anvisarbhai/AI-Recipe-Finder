@@ -30,6 +30,11 @@ st.set_page_config(
 )
 
 # ── Load project modules ─────────────────────────────────────────
+import streamlit as st
+import os
+# API Keys from Streamlit Secrets
+SPOONACULAR_API_KEY = st.secrets["80a99561ad3d415fb58cdc49a34cb3b2"]
+GEMINI_API_KEY = st.secrets["AIzaSyDBBmBB5tUeOmw3rVstl4ltgHwEvOOcjbw"]
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))   # ensure local imports work
