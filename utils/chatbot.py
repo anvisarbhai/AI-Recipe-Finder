@@ -1,61 +1,54 @@
 """
-utils/chatbot.py
-─────────────────────────────────────────────────────────────────
-Wraps the Google Gemini API to power the AI Cooking Assistant.
-Falls back gracefully if the key is missing or quota is exceeded.
-─────────────────────────────────────────────────────────────────
+utils/chatbot.py  —  Gemini AI Chef (fixed for latest SDK)
+Uses gemini-2.0-flash which is available on all free API keys.
 """
-import os
-import streamlit as st
-from dotenv import load_dotenv
-
-load_dotenv()
+import os, streamlit as st
 
 
-def _get_gemini_key() -> str:
+SYSTEM_PROMPT = (
+    "You are ChefBot, a warm and expert AI cooking assistant. "
+    "Help users with ingredient substitutions, healthier alternatives, "
+    "cooking tips, spice adjustments, meal suggestions, and nutrition. "
+    "Keep replies concise, practical, and friendly. Use food emojis sparingly."
+)
+
+def _gemini_key() -> str:
+    
     try:
-        return st.secrets["GEMINI_API_KEY"]
+        k = st.secrets.get("GEMINI_API_KEY","")
+        if k and k != "your_gemini_api_key_here":
+            return k
     except Exception:
-        return os.getenv("GEMINI_API_KEY", "")
+        pass
+    return os.getenv("GEMINI_API_KEY","")
 
-
-def chat_with_chef(user_message: str, conversation_history: list[dict]) -> str:
-    """
-    Send a message to Gemini and return the assistant reply as a string.
-    conversation_history is a list of {"role": "user"/"assistant", "content": "..."}.
-    """
-    api_key = _get_gemini_key()
-    if not api_key:
-        return (
-            "🔑 Gemini API key not found. Add GEMINI_API_KEY to your .env file "
-            "or Streamlit Secrets to enable the AI chef."
-        )
+def chat_with_chef(user_message: str, history: list) -> str:
+    api_key = _gemini_key()
+    if not api_key or api_key == "your_gemini_api_key_here":
+        return "🔑 Gemini API key not configured. Add GEMINI_API_KEY to your .env file."
 
     try:
-        import google.generativeai as genai  # lazy import
-
+        import google.generativeai as genai
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-            system_instruction=(
-                "You are ChefBot, a warm and knowledgeable AI cooking assistant. "
-                "You help users with ingredient substitutions, healthier alternatives, "
-                "cooking tips, spice levels, meal suggestions, and nutritional advice. "
-                "Keep answers concise, friendly, and practical. Use food emojis sparingly."
-            ),
-        )
 
-        # Build Gemini-format history
-        gemini_history = []
-        for msg in conversation_history[:-1]:  # exclude the latest user message
+        # Build history in Gemini format (exclude last user message)
+        gem_history = []
+        for msg in history[:-1]:
             role = "user" if msg["role"] == "user" else "model"
-            gemini_history.append({"role": role, "parts": [msg["content"]]})
+            gem_history.append({"role": role, "parts": [msg["content"]]})
 
-        chat = model.start_chat(history=gemini_history)
-        response = chat.send_message(user_message)
-        return response.text
+        model = genai.GenerativeModel(
+            model_name="gemini-2.0-flash",
+            system_instruction=SYSTEM_PROMPT,
+        )
+        chat  = model.start_chat(history=gem_history)
+        resp  = chat.send_message(user_message)
+        return resp.text
 
-    except ImportError:
-        return "📦 google-generativeai package not installed. Run: pip install google-generativeai"
     except Exception as e:
-        return f"⚠️ ChefBot error: {e}"
+        err = str(e)
+        if "404" in err or "not found" in err.lower():
+            return "⚠️ Gemini model unavailable. Try regenerating your API key at aistudio.google.com."
+        if "quota" in err.lower() or "429" in err:
+            return "⏳ Gemini rate limit reached. Please wait a moment and try again."
+        return f"⚠️ ChefBot error: {err}"
