@@ -5,4 +5,5 @@ scikit-learn
 numpy
 pandas
 pillow
+plotly
 google-generativeai
