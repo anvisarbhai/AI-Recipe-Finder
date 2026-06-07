@@ -16,7 +16,6 @@ and lets you chat with an AI chef.
 | 🛒 Missing Ingredients | "You only need basil and pasta to make this" |
 | 📊 Nutrition Charts | Interactive Plotly pie charts per recipe |
 | 🔖 Save Recipes | SQLite bookmarks, persisted across sessions |
-| 🌙 Dark Mode | One-click toggle |
 | 🤖 AI Chef Chat | Google Gemini-powered cooking assistant |
 | 📱 Mobile Responsive | Looks great on any screen size |
 
